@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<!--
+Clickymap by Christopher Gutteridge cjg@ecs.soton.ac.uk
+
+Clickymap is public domain. Free to modify and reuse for any purpose.
+
+(Leaflet & jQuery are still subject to their respective licenses)
+-->
+<head>
+  <meta charset="utf-8"/>
+  <title>Clickymap!</title>
+  <link rel="stylesheet" href="leaflet.css" />
+  <script src="leaflet.js"></script>
+  <script src="jquery.min.js"></script>
+  <style>
+body {
+	margin:0;
+}
+#map {
+	position: absolute;
+	width: 70%;
+	height: 100%;
+	cursor: crosshair;
+}
+#output {
+	position: absolute;
+	width: 30%;
+	height: 100%;
+	right: 0;
+	background-color: #ccd;
+	font-family: monospace;
+	text-align:left;
+	overflow-y: auto;
+	font-size: 80%;
+}
+#controls {
+	position: absolute;
+	width: 20%;
+	left: 45%;
+	top: 2%;
+	background-color: rgba( 0,0,0,0.3);
+	padding: 0.3em;
+	color: white;
+}
+#controls a {
+	display: inline-block;
+	color: white;
+	font-size:80%;
+}
+  </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="controls">
+      Output: <select id="mode">
+        <option value="geojson">GEO-JSON</option>
+        <option value="turtle">Turtle</option>
+        <option value="rdfxml">RDF+XML</option>
+      </select>
+<a href='http://prefix.cc/geo,xsd.ttl'>Turtle Namespaces</a>
+    </div>
+    <textarea id="output"></textarea>
+<script>
+$(document).ready(function(){
+var map = L.map('map').setView([50.93564,-1.39614], 17);
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    	attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+    	maxZoom: 21
+	}).addTo(map);
+	var state = 'sol';
+	var distance = {
+		"Size of Earth":	0.00004,
+		"Size of Sun":	0.047,
+		"Earth to Moon":	0.002,
+		"Alpha Centauri":	276173.78,
+		"Sun":	0,
+		"Mercury":	0.39,
+		"Venus":	0.723,
+		"Earth":	1,
+		"Mars":	1.524,
+		"Ceres":	2.8,
+		"Jupiter":	5.02,
+		"Saturn":	9.5,
+		"Uranus":	19.18,
+		"Neptune":	30.06,
+		"Pluto":	39.53
+	};
+	var planets = [ "Sun", "Mercury", "Venus", "Earth", "Mars", "Ceres", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto" ];
+	var line;
+	var markers = {};
+	
+	function onMapClick(e) 
+	{ 
+		var RES=100000; // rounding 
+		var lat = Math.round(e.latlng.lat*RES)/RES;
+		var lng = Math.round(e.latlng.lng*RES)/RES;
+		if( state=='sol' ) { 
+			markers["Sun"] = L.marker([lat,lng],{draggable:true}).addTo(map);
+			state = 'earth';
+			return;
+		}
+		if( state=='earth' ) { 
+			for( var i=0; i<planets.length; ++i ) {
+				markers[planets[i]] = L.marker([lat,lng],{draggable:true}).addTo(map);
+			}
+			line = L.polyline([[0,0],[0,0]], {color: 'red'}).addTo(map);	
+			
+			state = 'main';
+			return;
+		}
+	}
+	map.on('click', onMapClick);
+});
+</script>
+</body>
+</html>
