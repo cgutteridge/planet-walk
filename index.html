@@ -1,81 +1,89 @@
 <!DOCTYPE html>
 <html>
 <!--
-Clickymap by Christopher Gutteridge cjg@ecs.soton.ac.uk
-
-Clickymap is public domain. Free to modify and reuse for any purpose.
-
-(Leaflet & jQuery are still subject to their respective licenses)
+Solar System Walk by Christopher Gutteridge totl@soton.ac.uk
 -->
 <head>
   <meta charset="utf-8"/>
-  <title>Clickymap!</title>
+  <title>Solar System Walk Map</title>
   <link rel="stylesheet" href="leaflet.css" />
   <script src="leaflet.js"></script>
   <script src="jquery.min.js"></script>
   <style>
 body {
 	margin:0;
+	font-family: sans-serif;
 }
 #map {
 	position: absolute;
-	width: 70%;
+	width: 100%;
 	height: 100%;
-	cursor: crosshair;
-}
-#output {
-	position: absolute;
-	width: 30%;
-	height: 100%;
-	right: 0;
-	background-color: #ccd;
-	font-family: monospace;
-	text-align:left;
-	overflow-y: auto;
-	font-size: 80%;
 }
 #controls {
+	z-index:1000;
 	position: absolute;
-	width: 20%;
-	left: 45%;
+	max-width: 250px;
+	min-width: 10%;
+	right: 2%;
 	top: 2%;
-	background-color: rgba( 0,0,0,0.3);
+	background-color: rgba( 0,0,0,0.7);
 	padding: 0.3em;
 	color: white;
+	border: solid 2px black;
+	text-align: center;
 }
 #controls a {
 	display: inline-block;
 	color: white;
 	font-size:80%;
 }
+td {
+	text-align: right;
+	background-color: #339;
+	padding: 3px;
+}
+.state {
+	margin: 1em;
+	padding: 1em;
+	border: solid 2px black;
+	border-radius: 1em;
+	background-color: #006;
+}
+table { margin: 1em; }
   </style>
 </head>
 
 <body>
-    <div id="map"></div>
-    <div id="controls">
-      Output: <select id="mode">
-        <option value="geojson">GEO-JSON</option>
-        <option value="turtle">Turtle</option>
-        <option value="rdfxml">RDF+XML</option>
-      </select>
-<a href='http://prefix.cc/geo,xsd.ttl'>Turtle Namespaces</a>
-    </div>
-    <textarea id="output"></textarea>
+	<div id="map">Loading</div>
+	<div id="controls">
+           <div class="state state-sol"><div class="tip">Click to place the Sun</div></div>
+           <div class="state state-earth" style="display:none"><div class="tip">Click to place the Earth</div></div>
+           <div class="state state-main" style="display:none"><div class="tip">Drag planets to reposition</div></div>
+           <button id="reset">Reset</button>
+           <table>
+              <thead><tr><th>Thing</th><th>AU</th><th>Distance on map</th></tr></thead>
+              <tbody id="solTable"><tr><td>Sun</td><td>0</td><td>0</td></tr></tbody>
+           </table>
+      
+           <p>This tool was inspired by my friend Frode who was planning a planets walk for his son, Edgar, and wanted to get the scale right.</p>
+           <p>By <a href='mailto:totl@soton.ac.uk'>Christopher Gutteridge</a></p>
+        </div>
 <script>
 $(document).ready(function(){
-var map = L.map('map').setView([50.93564,-1.39614], 17);
+	var map = L.map('map').setView([50.93564,-1.39614], 17);
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    	attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
-    	maxZoom: 21
+		attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+		maxZoom: 19
 	}).addTo(map);
-	var state = 'sol';
-	var distance = {
-		"Size of Earth":	0.00004,
-		"Size of Sun":	0.047,
-		"Earth to Moon":	0.002,
-		"Alpha Centauri":	276173.78,
+
+
+	var state;
+	setState( "sol" );
+	var au = {
 		"Sun":	0,
+		"Size of Earth":	0.00004,
+		"Earth to Moon":	0.002,
+		"Size of Sun":	0.047,
 		"Mercury":	0.39,
 		"Venus":	0.723,
 		"Earth":	1,
@@ -85,32 +93,157 @@ var map = L.map('map').setView([50.93564,-1.39614], 17);
 		"Saturn":	9.5,
 		"Uranus":	19.18,
 		"Neptune":	30.06,
-		"Pluto":	39.53
+		"Pluto":	39.53,
+		"Distance to Alpha Centauri":	276173.78
 	};
 	var planets = [ "Sun", "Mercury", "Venus", "Earth", "Mars", "Ceres", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto" ];
-	var line;
+	var extras = [ "Size of Earth","Earth to Moon","Size of Sun","Distance to Alpha Centauri" ];
 	var markers = {};
+
+	for( var i=0; i<planets.length; ++i ) {
+		var iconData = {
+			iconUrl: 'images/'+planets[i]+'.png',
+			iconSize: [33, 44],
+			iconAnchor: [16, 44],
+			popupAnchor: [-3, -50],
+			shadowUrl: 'images/Shadow.png',
+			shadowSize: [58, 32],
+			shadowAnchor: [4, 31]
+		};
+		if( planets[i]=="Saturn" ) {
+			iconData.iconSize = [50,44];
+			iconData.iconAnchor = [25,44];
+		}
+		markers[planets[i]] = L.marker([0,0],{draggable:true,icon:L.icon(iconData)}).addTo(map);
+		markers[planets[i]].bindTooltip( planets[i]+" - "+au[planets[i]]+"AU" , {offset: [20,-22]});
+		let thisPlanet = planets[i];
+		markers[planets[i]].on('drag',(e)=>{ movePlanet(thisPlanet, e.latlng ); });
+		markers[planets[i]].on('dragend',(e)=>{ setHash(); } );
+		if( i>0 ) { 
+			$('#solTable').append( $("<tr><td>"+planets[i]+"</td><td>"+makenum(au[planets[i]],null,2)+"</td><td class='solDist' data-au='"+au[planets[i]]+"'>-</td></tr>" ));
+		}
+	}
+	for( var i=0; i<extras.length; ++i ) {
+		$('#solTable').append( $("<tr><td>"+extras[i]+"</td><td>"+makenum(au[extras[i]],null,2)+"</td><td class='solDist' data-au='"+au[extras[i]]+"'>-</td></tr>" ));
+	}
+
+	$('#reset').on("click", ()=>{ 
+		setState( "sol" );
+		for( var i=0; i<planets.length; ++i ) {
+			markers[planets[i]].setLatLng([0,0]);
+		}
+	});
 	
+	function makenum( num, a, b ) {
+		var i = ""+Math.floor(num);
+		var f = ""+Math.floor((num-i)*Math.pow(10,b));
+		if( i==0 ) { return num; }
+		if( a ) { while( i.length < a ) { i="0"+i; } }
+		if( b ) { while( f.length < b ) { f+="0"; } }
+		return i+"."+f;
+	}
+	function humanDistance(m) {
+		if( m<0.0001 ) { return makenum( m*1000000, null, 2 )+" μm"; }
+		if( m<0.01) { return Math.round( m*10000 )/10+" mm"; }
+		if( m<0.1) { return Math.round( m*1000 )+" mm"; }
+		if( m<1 ) { return Math.round( m*100 )+" cm"; }
+		if( m<100 ) { return Math.round( m*10 )/10+" m"; }
+		if( m<1000 ) { return Math.round( m )+" m"; }
+		if( m<10000 ) { return Math.round( m/100 )/10+"km"; }
+		return Math.round( m/1000 )+" Km"; 
+	}	
+	
+	function setState( newState ) {
+		$('.state').hide();
+		$('.state-'+newState).show();
+		state = newState;
+	}
+
+	// thanks to https://stackoverflow.com/questions/43167417/calculate-distance-between-two-points-in-leaflet
+	function getDistance(origin, destination) {
+		// return distance in meters
+		var lon1 = toRadian(origin[1]),
+			lat1 = toRadian(origin[0]),
+			lon2 = toRadian(destination[1]),
+			lat2 = toRadian(destination[0]);
+	
+		var deltaLat = lat2 - lat1;
+		var deltaLon = lon2 - lon1;
+	
+		var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
+		var c = 2 * Math.asin(Math.sqrt(a));
+		var EARTH_RADIUS = 6371;
+		return c * EARTH_RADIUS * 1000;
+	}
+	function toRadian(degree) {
+		return degree*Math.PI/180;
+	}
 	function onMapClick(e) 
 	{ 
 		var RES=100000; // rounding 
 		var lat = Math.round(e.latlng.lat*RES)/RES;
 		var lng = Math.round(e.latlng.lng*RES)/RES;
 		if( state=='sol' ) { 
-			markers["Sun"] = L.marker([lat,lng],{draggable:true}).addTo(map);
-			state = 'earth';
+			markers["Sun"].setLatLng( [lat,lng] );
+			setState( "earth" );
 			return;
 		}
 		if( state=='earth' ) { 
-			for( var i=0; i<planets.length; ++i ) {
-				markers[planets[i]] = L.marker([lat,lng],{draggable:true}).addTo(map);
-			}
-			line = L.polyline([[0,0],[0,0]], {color: 'red'}).addTo(map);	
-			
-			state = 'main';
+			movePlanet( "Earth", {lat:lat,lng:lng} );
+			setState( "main" );
 			return;
 		}
 	}
+	function movePlanet( planet, pos ) {
+                if( planet == "Sun" ) { 
+			movePlanet( "Pluto", markers["Pluto"].getLatLng() );
+			return;
+		}
+		var sunLL = markers["Sun"].getLatLng();
+		var plutoLL = markers["Pluto"].getLatLng();
+
+		var latRatio = (pos.lat-sunLL.lat)/au[planet];
+		var lngRatio = (pos.lng-sunLL.lng)/au[planet];
+		for( i=1; i<planets.length; ++i ) {
+			markers[planets[i]].setLatLng( [sunLL.lat + au[planets[i]]*latRatio, sunLL.lng + au[planets[i]]*lngRatio] );
+		}
+		var auToMeters = getDistance([sunLL.lat,sunLL.lng], [plutoLL.lat,plutoLL.lng] )/au["Pluto"];
+		$(".solDist").each( (i,e)=>{
+			var au = $(e).data('au');
+			$(e).text( humanDistance(au*auToMeters) );
+		});	
+	}
+
+	function setHash() {
+		sunLL = markers["Sun"].getLatLng();
+		earthLL = markers["Earth"].getLatLng();
+    		window.location.hash = '#'+sunLL.lat+","+sunLL.lng+";"+earthLL.lat+","+earthLL.lng;
+	}
+	function updateFromHash() {
+		var hash = window.location.hash.replace( /^#/, '' );
+		if( hash ) {
+			var codes = hash.split( /;/ );
+			var sunLL = codes[0].split( /,/ );
+			var earthLL = codes[1].split( /,/ );
+			setState( "main" );
+			markers["Sun"].setLatLng( sunLL );
+			// run move planet twice. The first time positions things and the second time
+			// has the correct positions to work out the numbers in the table
+			movePlanet( "Earth",{lat:earthLL[0],lng:earthLL[1]} );
+			movePlanet( "Earth",{lat:earthLL[0],lng:earthLL[1]} );
+			fitPlanets();
+		}
+	}
+
+	function fitPlanets() {
+		var p1 = markers["Sun"].getLatLng();
+		var p2 = markers["Pluto"].getLatLng();
+		var bounds = L.latLngBounds( [p1.lat,p1.lng],[p2.lat,p2.lng] );
+		map.fitBounds( bounds, { paddingBottomRight:[250,0] } );
+	}
+
+	map.whenReady( ()=>{ updateFromHash(); } );
+
 	map.on('click', onMapClick);
 });
 </script>
