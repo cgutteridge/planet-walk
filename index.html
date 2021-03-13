@@ -96,9 +96,22 @@ $(document).ready(function(){
 		"Pluto":	39.53,
 		"Distance to Alpha Centauri":	276173.78
 	};
+	var lineStyles = { 
+		"Mercury":	{ weight: 5, fill: false, color: "#888888" },
+		"Venus":	{ weight: 5, fill: false, color: "#ffffcc" },
+		"Earth":	{ weight: 5, fill: false, color: "#0000cc" },
+		"Mars":		{ weight: 5, fill: false, color: "#ff6666" },
+		"Ceres":	{ weight: 5, fill: false, color: "#888888", dashArray: [ 3,10 ] },
+		"Jupiter":	{ weight: 5, fill: false, color: "#999900" },
+		"Saturn":	{ weight: 5, fill: false, color: "#ffffcc" },
+		"Uranus":	{ weight: 5, fill: false, color: "#99ccff" },
+		"Neptune":	{ weight: 5, fill: false, color: "#9999ff" },
+		"Pluto":	{ weight: 5, fill: false, color: "#b69b85" }
+	};
 	var planets = [ "Sun", "Mercury", "Venus", "Earth", "Mars", "Ceres", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto" ];
 	var extras = [ "Size of Earth","Earth to Moon","Size of Sun","Distance to Alpha Centauri" ];
 	var markers = {};
+	var circles = {};
 
 	for( var i=0; i<planets.length; ++i ) {
 		var iconData = {
@@ -114,14 +127,14 @@ $(document).ready(function(){
 			iconData.iconSize = [50,44];
 			iconData.iconAnchor = [25,44];
 		}
-		markers[planets[i]] = L.marker([0,0],{draggable:true,icon:L.icon(iconData)}).addTo(map);
+		markers[planets[i]] = L.marker([0,0],{draggable:true,icon:L.icon(iconData)});
+		circles[planets[i]] = L.circle([0,0],1,lineStyles[planets[i]] );
 		markers[planets[i]].bindTooltip( planets[i]+" - "+au[planets[i]]+"AU" , {offset: [20,-22]});
 		let thisPlanet = planets[i];
 		markers[planets[i]].on('drag',(e)=>{ movePlanet(thisPlanet, e.latlng ); });
 		markers[planets[i]].on('dragend',(e)=>{ setHash(); } );
-		if( i>0 ) { 
-			$('#solTable').append( $("<tr><td>"+planets[i]+"</td><td>"+makenum(au[planets[i]],null,2)+"</td><td class='solDist' data-au='"+au[planets[i]]+"'>-</td></tr>" ));
-		}
+		
+		$('#solTable').append( $("<tr><td>"+planets[i]+"</td><td>"+makenum(au[planets[i]],null,2)+"</td><td class='solDist' data-au='"+au[planets[i]]+"'>-</td></tr>" ));
 	}
 	for( var i=0; i<extras.length; ++i ) {
 		$('#solTable').append( $("<tr><td>"+extras[i]+"</td><td>"+makenum(au[extras[i]],null,2)+"</td><td class='solDist' data-au='"+au[extras[i]]+"'>-</td></tr>" ));
@@ -130,8 +143,10 @@ $(document).ready(function(){
 	$('#reset').on("click", ()=>{ 
 		setState( "sol" );
 		for( var i=0; i<planets.length; ++i ) {
-			markers[planets[i]].setLatLng([0,0]);
+			markers[planets[i]].remove();
+			circles[planets[i]].remove();
 		}
+		clearHash();
 	});
 	
 	function makenum( num, a, b ) {
@@ -184,13 +199,15 @@ $(document).ready(function(){
 		var lat = Math.round(e.latlng.lat*RES)/RES;
 		var lng = Math.round(e.latlng.lng*RES)/RES;
 		if( state=='sol' ) { 
-			markers["Sun"].setLatLng( [lat,lng] );
+			markers["Sun"].setLatLng( [lat,lng] ).addTo(map);
 			setState( "earth" );
 			return;
 		}
 		if( state=='earth' ) { 
 			movePlanet( "Earth", {lat:lat,lng:lng} );
 			setState( "main" );
+			setHash();
+			fitPlanets();
 			return;
 		}
 	}
@@ -204,10 +221,14 @@ $(document).ready(function(){
 
 		var latRatio = (pos.lat-sunLL.lat)/au[planet];
 		var lngRatio = (pos.lng-sunLL.lng)/au[planet];
-		for( i=1; i<planets.length; ++i ) {
-			markers[planets[i]].setLatLng( [sunLL.lat + au[planets[i]]*latRatio, sunLL.lng + au[planets[i]]*lngRatio] );
-		}
 		var auToMeters = getDistance([sunLL.lat,sunLL.lng], [plutoLL.lat,plutoLL.lng] )/au["Pluto"];
+
+		for( i=1; i<planets.length; ++i ) {
+			var ll = [sunLL.lat + au[planets[i]]*latRatio, sunLL.lng + au[planets[i]]*lngRatio];
+			markers[planets[i]].setLatLng( ll ).addTo(map);
+			circles[planets[i]].setLatLng( markers["Sun"].getLatLng() ).setRadius( au[planets[i]]*auToMeters ).addTo(map);
+console.log( planets[i], au[planets[i]]*auToMeters );
+		}
 		$(".solDist").each( (i,e)=>{
 			var au = $(e).data('au');
 			$(e).text( humanDistance(au*auToMeters) );
@@ -219,6 +240,9 @@ $(document).ready(function(){
 		earthLL = markers["Earth"].getLatLng();
     		window.location.hash = '#'+sunLL.lat+","+sunLL.lng+";"+earthLL.lat+","+earthLL.lng;
 	}
+	function clearHash() {
+    		window.location.hash = '';
+	}
 	function updateFromHash() {
 		var hash = window.location.hash.replace( /^#/, '' );
 		if( hash ) {
@@ -226,7 +250,7 @@ $(document).ready(function(){
 			var sunLL = codes[0].split( /,/ );
 			var earthLL = codes[1].split( /,/ );
 			setState( "main" );
-			markers["Sun"].setLatLng( sunLL );
+			markers["Sun"].setLatLng( sunLL ).addTo(map);
 			// run move planet twice. The first time positions things and the second time
 			// has the correct positions to work out the numbers in the table
 			movePlanet( "Earth",{lat:earthLL[0],lng:earthLL[1]} );
