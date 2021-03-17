@@ -227,7 +227,6 @@ $(document).ready(function(){
 			var ll = [sunLL.lat + au[planets[i]]*latRatio, sunLL.lng + au[planets[i]]*lngRatio];
 			markers[planets[i]].setLatLng( ll ).addTo(map);
 			circles[planets[i]].setLatLng( markers["Sun"].getLatLng() ).setRadius( au[planets[i]]*auToMeters ).addTo(map);
-console.log( planets[i], au[planets[i]]*auToMeters );
 		}
 		$(".solDist").each( (i,e)=>{
 			var au = $(e).data('au');
