@@ -43,6 +43,7 @@ Opening `index.html` directly may work for some browsers, but a local HTTP serve
 - `planet-walk.js` is written as one `$(document).ready(...)` closure with function declarations inside it.
 - Keep changes compatible with plain browser JavaScript unless a build step is intentionally introduced.
 - Do not replace vendored Leaflet or jQuery files as part of unrelated changes.
+- When changing `planet-walk.js`, bump the cache-busting query string on its script tag in `index.html`, for example from `planet-walk.js?v=1` to `planet-walk.js?v=2`.
 - Planet distances are stored in AU in the `au` object.
 - The `planets` array controls marker creation, table rows, and map layer ordering.
 - The `extras` array only adds distance rows to the table.
@@ -70,4 +71,3 @@ For behavior changes, manually verify:
 - Loading a URL with a saved hash restores the configured walk.
 
 For visual or asset changes, verify the relevant planet marker PNGs render at the expected size and alignment.
-

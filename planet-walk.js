@@ -41,6 +41,8 @@ $(document).ready(function(){
 	var extras = [ "Size of Earth","Earth to Moon","Size of Sun","Distance to Alpha Centauri" ];
 	var markers = {};
 	var circles = {};
+	var currentAuToMeters;
+	var unitSystem = "metric";
 
 	for( var i=0; i<planets.length; ++i ) {
 		var iconData = {
@@ -74,6 +76,10 @@ $(document).ready(function(){
 		removeFromMap();
 		clearHash();
 	});
+	$('#unitSystem').on("change", (e)=>{
+		unitSystem = e.target.value;
+		updateDistanceTable();
+	});
 
 
 	function removeFromMap() {
@@ -99,6 +105,9 @@ $(document).ready(function(){
 		return i+"."+f;
 	}
 	function humanDistance(m) {
+		if( unitSystem=="imperial" ) { return humanImperialDistance(m); }
+		if( unitSystem=="nautical" ) { return humanNauticalDistance(m); }
+
 		if( m<0.0001 ) { return makenum( m*1000000, null, 2 )+" μm"; }
 		if( m<0.01) { return Math.round( m*10000 )/10+" mm"; }
 		if( m<0.1) { return Math.round( m*1000 )+" mm"; }
@@ -108,6 +117,63 @@ $(document).ready(function(){
 		if( m<10000 ) { return Math.round( m/100 )/10+"km"; }
 		return Math.round( m/1000 )+" Km"; 
 	}	
+	function humanImperialDistance(m) {
+		var inches = m*39.37007874015748;
+		if( inches==0 ) { return "0"; }
+		if( inches<3 ) { return fractionInches(inches); }
+		if( inches<12 ) { return formatWithUnit(inches, "inch", "inches"); }
+		if( inches<36 ) { return formatWithUnit(inches/12, "foot", "feet"); }
+		if( inches<63360 ) { return formatWithUnit(inches/36, "yard", "yards"); }
+		return formatWithUnit(inches/63360, "mile", "miles");
+	}
+	function humanNauticalDistance(m) {
+		var inches = m*39.37007874015748;
+		if( inches==0 ) { return "0"; }
+		if( inches<3 ) { return fractionInches(inches); }
+		if( inches<12 ) { return formatWithUnit(inches, "inch", "inches"); }
+		if( inches<72913.38582677165 ) { return formatWithUnit(inches/12, "foot", "feet"); }
+		return formatWithUnit(m/1852, "nautical mile", "nautical miles");
+	}
+	function fractionInches(inches) {
+		var denominator = 16;
+		var numerator = Math.round(inches*denominator);
+		if( numerator==0 ) { return "0 inches"; }
+		var whole = Math.floor(numerator/denominator);
+		numerator = numerator%denominator;
+		if( numerator==0 ) { return whole+" "+unitName(whole, "inch", "inches"); }
+		var divisor = greatestCommonDivisor(numerator, denominator);
+		var fraction = (numerator/divisor)+"/"+(denominator/divisor);
+		if( whole==0 ) { return fraction+" inches"; }
+		return whole+" "+fraction+" inches";
+	}
+	function greatestCommonDivisor(a,b) {
+		while( b!=0 ) {
+			var t = b;
+			b = a%b;
+			a = t;
+		}
+		return a;
+	}
+	function formatOneDecimal(num) {
+		var rounded = Math.round(num*10)/10;
+		if( rounded==Math.floor(rounded) ) { return ""+rounded; }
+		return ""+rounded;
+	}
+	function formatWithUnit(num, singular, plural) {
+		var formatted = formatOneDecimal(num);
+		return formatted+" "+unitName(Number(formatted), singular, plural);
+	}
+	function unitName(num, singular, plural) {
+		if( num==1 ) { return singular; }
+		return plural;
+	}
+	function updateDistanceTable() {
+		if( !currentAuToMeters ) { return; }
+		$(".solDist").each( (i,e)=>{
+			var au = $(e).data('au');
+			$(e).text( humanDistance(au*currentAuToMeters) );
+		});
+	}
 	
 	function setState( newState ) {
 		$('.state').hide();
@@ -166,17 +232,14 @@ $(document).ready(function(){
 
 		var latRatio = (pos.lat-sunLL.lat)/au[planet];
 		var lngRatio = (pos.lng-sunLL.lng)/au[planet];
-		var auToMeters = getDistance([sunLL.lat,sunLL.lng], [plutoLL.lat,plutoLL.lng] )/au["Pluto"];
+		currentAuToMeters = getDistance([sunLL.lat,sunLL.lng], [plutoLL.lat,plutoLL.lng] )/au["Pluto"];
 
 		for( i=1; i<planets.length; ++i ) {
 			var ll = [sunLL.lat + au[planets[i]]*latRatio, sunLL.lng + au[planets[i]]*lngRatio];
 			markers[planets[i]].setLatLng( ll );
-			circles[planets[i]].setLatLng( markers["Sun"].getLatLng() ).setRadius( au[planets[i]]*auToMeters );
+			circles[planets[i]].setLatLng( markers["Sun"].getLatLng() ).setRadius( au[planets[i]]*currentAuToMeters );
 		}
-		$(".solDist").each( (i,e)=>{
-			var au = $(e).data('au');
-			$(e).text( humanDistance(au*auToMeters) );
-		});	
+		updateDistanceTable();
 	}
 
 	function setHash() {

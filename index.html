@@ -9,7 +9,7 @@ Solar System Walk by Christopher Gutteridge totl@soton.ac.uk
   <link rel="stylesheet" href="leaflet.css" />
   <script src="leaflet.js"></script>
   <script src="jquery.min.js"></script>
-  <script src="planet-walk.js"></script>
+  <script src="planet-walk.js?v=1"></script>
   <style>
 body {
 	margin:0;
@@ -38,6 +38,16 @@ body {
 	color: white;
 	font-size:80%;
 }
+#unitControls {
+	margin: 0.8em 1em 0;
+	text-align: right;
+}
+#unitControls label {
+	font-size: 80%;
+}
+#unitSystem {
+	max-width: 100%;
+}
 td {
 	text-align: right;
 	background-color: #339;
@@ -61,12 +71,20 @@ table { margin: 1em; }
            <div class="state state-earth" style="display:none"><div class="tip">Click to place the Earth</div></div>
            <div class="state state-main" style="display:none"><div class="tip">Drag planets to reposition</div></div>
            <button id="reset">Reset</button>
+           <div id="unitControls">
+              <label for="unitSystem">Distance units</label>
+              <select id="unitSystem">
+                 <option value="metric">Metric</option>
+                 <option value="imperial">Imperial</option>
+                 <option value="nautical">Nautical</option>
+              </select>
+           </div>
            <table>
               <thead><tr><th>Thing</th><th>AU</th><th>Distance on map</th></tr></thead>
-              <tbody id="solTable"><tr><td>Sun</td><td>0</td><td>0</td></tr></tbody>
+              <tbody id="solTable"><tr><td>Sun</td><td>0</td><td class="solDist" data-au="0">0</td></tr></tbody>
            </table>
       
-           <p>This tool was inspired by my friend Frode who was planning a planets walk for his son, Edgar, and wanted to get the scale right.</p>
+           <p>This tool was inspired by my friend Frode who was planning a planets walk for his son, Edgar, and wanted to get the scale right, also <a href='https://www.stokeywoodall.uk/astronomy'>STOKEY'S SOLAR WALK</a> in Ventnor, Isle of Wight.</p>
            <p>By <a href='mailto:totl@soton.ac.uk'>Christopher Gutteridge</a></p>
         </div>
 </body>
