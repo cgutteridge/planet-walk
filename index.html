@@ -9,7 +9,7 @@ Solar System Walk by Christopher Gutteridge totl@soton.ac.uk
   <link rel="stylesheet" href="leaflet.css" />
   <script src="leaflet.js"></script>
   <script src="jquery.min.js"></script>
-  <script src="planet-walk.js?v=1"></script>
+  <script src="planet-walk.js?v=3"></script>
   <style>
 body {
 	margin:0;
@@ -80,8 +80,8 @@ table { margin: 1em; }
               </select>
            </div>
            <table>
-              <thead><tr><th>Thing</th><th>AU</th><th>Distance on map</th></tr></thead>
-              <tbody id="solTable"><tr><td>Sun</td><td>0</td><td class="solDist" data-au="0">0</td></tr></tbody>
+              <thead><tr><th>Object</th><th>AU</th><th>Distance on map</th></tr></thead>
+              <tbody id="solTable"></tbody>
            </table>
       
            <p>This tool was inspired by my friend Frode who was planning a planets walk for his son, Edgar, and wanted to get the scale right, also <a href='https://www.stokeywoodall.uk/astronomy'>STOKEY'S SOLAR WALK</a> in Ventnor, Isle of Wight.</p>

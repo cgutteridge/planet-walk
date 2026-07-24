@@ -102,7 +102,7 @@ $(document).ready(function(){
 		if( i==0 ) { return num; }
 		if( a ) { while( i.length < a ) { i="0"+i; } }
 		if( b ) { while( f.length < b ) { f+="0"; } }
-		return i+"."+f;
+		return addDigitGroups(i)+"."+f;
 	}
 	function humanDistance(m) {
 		if( unitSystem=="imperial" ) { return humanImperialDistance(m); }
@@ -113,38 +113,38 @@ $(document).ready(function(){
 		if( m<0.1) { return Math.round( m*1000 )+" mm"; }
 		if( m<1 ) { return Math.round( m*100 )+" cm"; }
 		if( m<100 ) { return Math.round( m*10 )/10+" m"; }
-		if( m<1000 ) { return Math.round( m )+" m"; }
-		if( m<10000 ) { return Math.round( m/100 )/10+"km"; }
-		return Math.round( m/1000 )+" Km"; 
+		if( m<1000 ) { return formatInteger(Math.round( m ))+" m"; }
+		if( m<10000 ) { return formatOneDecimal(m/1000)+" km"; }
+		return formatInteger(Math.round( m/1000 ))+" km";
 	}	
 	function humanImperialDistance(m) {
 		var inches = m*39.37007874015748;
 		if( inches==0 ) { return "0"; }
 		if( inches<3 ) { return fractionInches(inches); }
-		if( inches<12 ) { return formatWithUnit(inches, "inch", "inches"); }
-		if( inches<36 ) { return formatWithUnit(inches/12, "foot", "feet"); }
-		if( inches<63360 ) { return formatWithUnit(inches/36, "yard", "yards"); }
-		return formatWithUnit(inches/63360, "mile", "miles");
+		if( inches<12 ) { return formatWithSuffix(inches, "\""); }
+		if( inches<36 ) { return formatWithSuffix(inches/12, "'"); }
+		if( inches<63360 ) { return formatWithSuffix(inches/36, " yd"); }
+		return formatWithSuffix(inches/63360, " mi");
 	}
 	function humanNauticalDistance(m) {
 		var inches = m*39.37007874015748;
 		if( inches==0 ) { return "0"; }
 		if( inches<3 ) { return fractionInches(inches); }
-		if( inches<12 ) { return formatWithUnit(inches, "inch", "inches"); }
-		if( inches<72913.38582677165 ) { return formatWithUnit(inches/12, "foot", "feet"); }
-		return formatWithUnit(m/1852, "nautical mile", "nautical miles");
+		if( inches<12 ) { return formatWithSuffix(inches, "\""); }
+		if( inches<72913.38582677165 ) { return formatWithSuffix(inches/12, "'"); }
+		return formatWithSuffix(m/1852, " nmi");
 	}
 	function fractionInches(inches) {
 		var denominator = 16;
 		var numerator = Math.round(inches*denominator);
-		if( numerator==0 ) { return "0 inches"; }
+		if( numerator==0 ) { return "0\""; }
 		var whole = Math.floor(numerator/denominator);
 		numerator = numerator%denominator;
-		if( numerator==0 ) { return whole+" "+unitName(whole, "inch", "inches"); }
+		if( numerator==0 ) { return whole+"\""; }
 		var divisor = greatestCommonDivisor(numerator, denominator);
 		var fraction = (numerator/divisor)+"/"+(denominator/divisor);
-		if( whole==0 ) { return fraction+" inches"; }
-		return whole+" "+fraction+" inches";
+		if( whole==0 ) { return fraction+"\""; }
+		return whole+" "+fraction+"\"";
 	}
 	function greatestCommonDivisor(a,b) {
 		while( b!=0 ) {
@@ -156,16 +156,20 @@ $(document).ready(function(){
 	}
 	function formatOneDecimal(num) {
 		var rounded = Math.round(num*10)/10;
-		if( rounded==Math.floor(rounded) ) { return ""+rounded; }
-		return ""+rounded;
+		if( rounded==Math.floor(rounded) ) { return formatInteger(rounded); }
+		return addDigitGroups(""+rounded);
 	}
-	function formatWithUnit(num, singular, plural) {
+	function formatInteger(num) {
+		return addDigitGroups(""+num);
+	}
+	function addDigitGroups(num) {
+		var parts = num.split(".");
+		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		return parts.join(".");
+	}
+	function formatWithSuffix(num, suffix) {
 		var formatted = formatOneDecimal(num);
-		return formatted+" "+unitName(Number(formatted), singular, plural);
-	}
-	function unitName(num, singular, plural) {
-		if( num==1 ) { return singular; }
-		return plural;
+		return formatted+suffix;
 	}
 	function updateDistanceTable() {
 		if( !currentAuToMeters ) { return; }
